@@ -1,12 +1,22 @@
+import importlib
+
 from fnnfunctor.loss.yolo import compute_loss
 
 
 class Trainer():
-    def __init__(self):
+    def __init__(self, config):
         self.start_epoch = 0
         self.max_epoch = None
 
-        self.model = None
+        module_fnnmodel = importlib.import_module('fnnmodel')
+
+        # 获取类对象
+        class_model = getattr(module_fnnmodel, config.model['type'])
+
+        # 实例化对象
+        self.model = class_model()
+        self.model.get_model(config.model['module']['type'], **config.model['module']['kwargs'])
+        # self.model = type('YOLOv3')()
 
         self.device = None
 
