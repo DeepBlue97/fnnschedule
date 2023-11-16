@@ -20,9 +20,9 @@ if __name__ == '__main__':
     match args.mode:
         case 'train':
             # print(config.dataset)
-            # trainer.train()
+            trainer.train()
             # trainer.model.get_model(config.model['type'], **config.model.pop('type'))
-            print(trainer.model.model)
+            # print(trainer.model.model)
 
         case 'test':
             pass

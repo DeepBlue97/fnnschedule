@@ -1,5 +1,6 @@
 import importlib
 
+from fnnschedule import *
 from fnnfunctor.loss.yolo import compute_loss
 
 
@@ -18,7 +19,7 @@ class Trainer():
         self.model.get_model(config.model['module']['type'], **config.model['module']['kwargs'])
         # self.model = type('YOLOv3')()
 
-        self.device = None
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def train(self):
         self.before_train()
@@ -30,6 +31,8 @@ class Trainer():
             self.after_train()
 
     def before_train(self):
+        # torch.cuda.set_device('cuda')
+        self.model.to(self.device)
         self.model.train()
 
     def after_train(self):
