@@ -25,4 +25,4 @@ if __name__ == '__main__':
             # print(trainer.model.model)
 
         case 'test':
-            pass
+            trainer.test()
