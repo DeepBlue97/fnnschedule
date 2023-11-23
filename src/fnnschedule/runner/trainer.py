@@ -60,76 +60,34 @@ class Trainer():
         self.save_interval = config.schedule['save_interval']
         self.output_dir = config.output_dir
 
-
-        # module_fnnmodel = importlib.import_module('fnnmodel')
-
-        # # 获取类对象
-        # class_model = getattr(module_fnnmodel, config.model['type'])
-
-        # 实例化对象
-        # self.model = class_model(config.model)
-        # self.model = class_model(**config.model)
         self.model = dict2cls(config.model)
-
-        # self.model.get_model(config.model['module']['type'], **config.model['module']['kwargs'])
-        # self.model = type('YOLOv3')()
 
         # self.optimizer = self.model.get_optimizer()
         self.optimizer = self.model.optimizer
 
-        # self.device = 
-
-        # self.train_dataset = dict2cls(config.train_dataloader['dataset'])
-        # self.val_dataset = dict2cls(config.val_dataloader['dataset'])
-
-
-        # AUGMENTATION_TRANSFORMS = transforms.Compose([
-        #     AbsoluteLabels(),
-        #     DefaultAug(),
-        #     PadSquare(),
-        #     RelativeLabels(),
-        #     ToTensor(),
-        # ])
-
-        # self.train_loader = torch.utils.data.DataLoader(
-        #     self.train_dataset,
-        #     batch_size=32,
-        #     shuffle=True,
-        #     num_workers=2,
-        #     pin_memory=True,
-        #     # collate_fn=self.train_dataset.collate_fn,
-        #     # worker_init_fn=worker_seed_set
-        # )
-        # self.val_loader = torch.utils.data.DataLoader(
-        #     self.val_dataset,
-        #     batch_size=32,
-        #     shuffle=False,
-        #     num_workers=2,
-        #     pin_memory=True,
-        #     # collate_fn=self.val_dataset.collate_fn,
-        #     # worker_init_fn=worker_seed_set
-        # )
         self.train_loader = dict2cls(config.train_dataloader, recursive=True)
         self.val_loader = dict2cls(config.val_dataloader, recursive=True)
-
-
-        # for im, (_a, _b, _c) in self.train_loader:
-        #     print(im.shape)
-        #     print(_b.shape)
-        #     print()
-
-        # for i, imgs in enumerate(self.train_loader):
-        #     print(imgs)
-        #     print(imgs)
-
-            # print(_1)
-
-
-        # self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if hasattr(config, 'test_dataloader'):
+            self.test_loader = dict2cls(config.test_dataloader, recursive=True)
 
     @property
     def device(self):
         return self.model.device
+
+    """
+    TRAIN
+    """
+    def before_train(self):
+        # torch.cuda.set_device('cuda')
+        # self.model.model.to(self.device)
+        self.model.model.train()
+
+        self.max_iter = len(self.train_loader)
+
+        # self.prefetcher = DataPrefetcher(self.train_loader)
+
+    def before_epoch(self):
+        pass
 
     def train(self):
         self.before_train()
@@ -140,72 +98,17 @@ class Trainer():
         finally:
             self.after_train()
 
-    def val(self):
-        self.before_val()
-        try:
-            self.val_in_epoch()
-        except Exception:
-            raise
-        finally:
-            self.after_val()
-
-    def val_in_epoch(self):
-        for self.iter_val, (imgs, targets) in enumerate(self.val_loader):
-            self.val_one_iter(imgs, targets)
-
-    def val_one_iter(self, imgs, targets):
-        # def train_one_iter(self):
-            # imgs, targets = self.prefetcher.next()
-            
-            imgs = imgs.to(self.device, non_blocking=True)  # torch.Size([8, 3, 416, 416])
-            # targets = targets.to(self.device)  # torch.Size([8, 6])
-
-            outputs = self.model.forward(imgs)
-
-            loss = self.model.computer_loss(outputs, targets)
-            # self.loss_str = self.model.log_loss()
-
-    
-    def before_val(self):
-        self.model.model.eval()
-
-    def before_train(self):
-        # torch.cuda.set_device('cuda')
-        # self.model.model.to(self.device)
-        self.model.model.train()
-
-        self.max_iter = len(self.train_loader)
-
-        # self.prefetcher = DataPrefetcher(self.train_loader)
-
-    def after_train(self):
-        # self.save_model()
-        # self.log()
-        pass
-
     def train_in_epoch(self):
         for self.epoch in range(self.start_epoch, self.max_epoch+1):
             self.before_epoch()
             self.train_in_iter()
             self.after_epoch()
 
-    def before_epoch(self):
+    def before_iter(self):
         pass
-
-    def save_model(self):
-        os.makedirs(self.output_dir, exist_ok=True)
-        checkpoint_path = os.path.join(self.output_dir, f'epoch_{self.epoch}.pth')
-        self.model.save_model(checkpoint_path)
-        print(f'save to: {checkpoint_path}')
-
-    def after_epoch(self):
-        if self.epoch % self.save_interval == 0:
-            self.save_model()
-        self.log()
 
     def train_in_iter(self):
         # for self.iter in range(self.max_iter):
-        # for i, (imgs, targets) in self.train_loader:
         for self.iter, (imgs, targets) in enumerate(self.train_loader):
             self.before_iter()
             self.train_one_iter(imgs, targets)
@@ -225,17 +128,9 @@ class Trainer():
         # print(f'loss: {loss}' )
         self.loss_str = self.model.log_loss()
 
-
-
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
-
-    def before_iter(self):
-        pass
-
-    def log(self):
-        print(f'epoch:{self.epoch}/{self.max_epoch} iter:{self.iter}/{self.max_iter} loss: {self.loss_str}')
 
     def after_iter(self):
         # self.iter_count += 1
@@ -243,3 +138,62 @@ class Trainer():
         #     print(f'epoch:{self.epoch}/{self.max_epoch} iter:{self.iter}/{self.max_iter}')
         if self.iter % self.log_interval == 0:
             self.log()
+
+    def after_epoch(self):
+        if self.epoch % self.save_interval == 0:
+            self.save_model()
+        self.log()
+
+    def after_train(self):
+        # self.save_model()
+        # self.log()
+        pass
+
+    """
+    TEST
+    """
+    def before_test(self):
+        self.model.model.eval()
+
+    def test(self):
+        self.before_test()
+        try:
+            self.test_in_epoch()
+        except Exception:
+            raise
+        finally:
+            self.after_test()
+
+    def test_in_epoch(self):
+        for self.iter_test, (imgs, img_name) in enumerate(self.test_loader):
+            self.test_one_iter(imgs, img_name)
+
+    def test_one_iter(self, img, img_name):
+        # def train_one_iter(self):
+        # imgs, targets = self.prefetcher.next()
+        
+        img = img.to(self.device, non_blocking=True)  # torch.Size([8, 3, 416, 416])
+        # targets = targets.to(self.device)  # torch.Size([8, 6])
+
+        self.model.test(img, img_name, **dict(output_dir=self.output_dir))
+
+        # outputs = self.model.forward(imgs)
+
+        # pre = self.model.decode(outputs, None, mode='output')
+        # print(pre)
+        # self.model.visual()
+
+        # loss = self.model.computer_loss(outputs, targets)
+        # self.loss_str = self.model.log_loss()
+
+    def after_test(self):
+        pass
+
+    def save_model(self):
+        os.makedirs(self.output_dir, exist_ok=True)
+        checkpoint_path = os.path.join(self.output_dir, f'epoch_{self.epoch}.pth')
+        self.model.save_model(checkpoint_path)
+        print(f'save to: {checkpoint_path}')
+
+    def log(self):
+        print(f'epoch:{self.epoch}/{self.max_epoch} iter:{self.iter}/{self.max_iter} loss: {self.loss_str}')
