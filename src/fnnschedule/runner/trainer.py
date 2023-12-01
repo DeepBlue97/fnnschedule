@@ -142,6 +142,8 @@ class Trainer():
     def after_epoch(self):
         if self.epoch % self.save_interval == 0:
             self.save_model()
+            # self.model.model.eval()
+            # self.model.quantize_deploy(None, deploy=True)
         self.log()
 
     def after_train(self):
@@ -197,3 +199,19 @@ class Trainer():
 
     def log(self):
         print(f'epoch:{self.epoch}/{self.max_epoch} iter:{self.iter}/{self.max_iter} loss: {self.loss_str}')
+
+    def deploy(self):
+        # is_dump = False
+
+        # output_dir='dump'
+
+        # model = self.model.qat_processor.to_deployable(model, output_dir=output_dir)
+        # model = self.model.qat_processor.deployable_model(output_dir, is_dump)
+
+        # if args.is_dump:
+        #     exp.qat_processor.export_xmodel(args.cvt_dir, deploy_check=True)
+
+        # self.model.model = self.model.qat_processor.to_deployable(self.model.model, output_dir='quantize_result')
+        # self.model.quantize_ptq(self.val_loader, 1000)
+        self.model.quantize_deploy(self.val_loader, deploy=False)
+        self.model.quantize_deploy(self.val_loader, deploy=True)
